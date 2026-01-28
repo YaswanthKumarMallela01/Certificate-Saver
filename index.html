@@ -30,11 +30,39 @@
             font-family: 'Inter', sans-serif;
             background-color: #f5f7ff;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            justify-content: flex-start;
             align-items: center;
             min-height: 100vh;
             padding: 20px;
             line-height: 1.6;
+        }
+
+        .topbar {
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 18px 20px;
+            margin-bottom: 18px;
+        }
+
+        .topbar-title {
+            text-align: center;
+            color: var(--primary);
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .topbar-datetime {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            font-size: 13px;
+            color: var(--gray);
         }
 
         .auth-container {
@@ -45,6 +73,11 @@
             max-width: 420px;
             padding: 40px;
             transition: var(--transition);
+        }
+
+        /* Slightly more modern feel (consistent with dashboard cards) */
+        .topbar, .auth-container {
+            border-radius: 12px;
         }
 
         h1 {
@@ -171,36 +204,76 @@
             color: var(--primary);
         }
 
-        .app-title {
-            text-align: center;
-            color: var(--primary);
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 10px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid var(--primary-light);
-        }
-
         .otp-section {
             margin-top: 20px;
             padding-top: 20px;
             border-top: 1px solid #eee;
         }
 
+        .otp-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 10px 0 12px;
+            font-size: 13px;
+            color: var(--gray);
+        }
+
+        .otp-timer {
+            font-weight: 600;
+            color: var(--primary-dark);
+        }
+
+        .otp-status {
+            font-weight: 500;
+        }
+
         .otp-input-group {
             display: flex;
             gap: 10px;
             margin-bottom: 15px;
+            align-items: stretch;
         }
 
         .otp-input-group input {
             flex: 1;
         }
 
+        #otp-code {
+            min-height: 52px;
+            font-size: 18px;
+            letter-spacing: 6px;
+            text-align: center;
+            padding: 14px 16px;
+            background: linear-gradient(180deg, #ffffff 0%, #fbfbff 100%);
+            border: 1px solid #e7e9f2;
+            border-radius: 12px;
+            outline: none;
+            pointer-events: auto;
+            z-index: 1;
+        }
+
+        #otp-code:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+
         .otp-input-group button {
             flex: 0 0 auto;
             padding: 14px 20px;
             margin-top: 0;
+            min-height: 52px;
+            border-radius: 12px;
+        }
+
+        @media (max-width: 520px) {
+            .otp-input-group {
+                flex-direction: column;
+            }
+            .otp-input-group button {
+                width: 100%;
+            }
         }
 
         .resend-otp {
@@ -221,8 +294,16 @@
     </style>
 </head>
 <body>
+    <div class="topbar">
+        <div class="topbar-title">Yaswanth's AI Certificate Management Hub</div>
+        <div class="topbar-datetime">
+            <div id="day"></div>
+            <div id="date"></div>
+            <div id="time"></div>
+        </div>
+    </div>
+
     <div class="auth-container">
-        <div class="app-title">🎓 Yaswanth's AI Certificate Management Hub</div>
         <h1 id="form-title">Login</h1>
         
         <!-- Login Form -->
@@ -263,8 +344,12 @@
                     <label style="font-size: 14px; color: var(--gray); margin-bottom: 8px; display: block;">
                         Enter OTP sent to your email:
                     </label>
+                    <div class="otp-meta">
+                        <div class="otp-status" id="otpStatus">Waiting for OTP…</div>
+                        <div class="otp-timer" id="otpTimer">10:00</div>
+                    </div>
                     <div class="otp-input-group">
-                        <input type="text" id="otp-code" placeholder="Enter 6-digit OTP" maxlength="6" pattern="[0-9]{6}">
+                        <input type="text" id="otp-code" inputmode="numeric" autocomplete="one-time-code" placeholder="Enter 6-digit OTP" maxlength="6" pattern="[0-9]{6}">
                         <button type="button" id="verify-otp-btn">Verify</button>
                     </div>
                     <div class="resend-otp">
@@ -353,7 +438,56 @@
             }
         });
 
+        // Safe JSON parsing (prevents generic errors)
+        async function safeJson(response) {
+            const text = await response.text();
+            try {
+                return JSON.parse(text);
+            } catch {
+                return { success: false, message: text || `HTTP ${response.status}` };
+            }
+        }
+
         let registrationData = {};
+        let isOTPVerified = false;
+        let otpRemainingSeconds = 0;
+        let otpTimerInterval = null;
+
+        function setOtpUi(statusText, timerSeconds) {
+            const statusEl = document.getElementById('otpStatus');
+            const timerEl = document.getElementById('otpTimer');
+            if (statusEl) statusEl.textContent = statusText;
+            if (timerEl) {
+                const m = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+                const s = String(timerSeconds % 60).padStart(2, '0');
+                timerEl.textContent = `${m}:${s}`;
+            }
+        }
+
+        function startOtpCountdown(seconds) {
+            otpRemainingSeconds = seconds;
+            const verifyBtn = document.getElementById('verify-otp-btn');
+            const registerBtn = document.getElementById('register-btn');
+            if (verifyBtn) verifyBtn.disabled = false;
+            if (registerBtn) registerBtn.disabled = true;
+
+            setOtpUi('OTP sent. Enter it below.', otpRemainingSeconds);
+
+            if (otpTimerInterval) clearInterval(otpTimerInterval);
+            otpTimerInterval = setInterval(() => {
+                otpRemainingSeconds -= 1;
+                if (otpRemainingSeconds <= 0) {
+                    otpRemainingSeconds = 0;
+                    clearInterval(otpTimerInterval);
+                    otpTimerInterval = null;
+                    if (verifyBtn) verifyBtn.disabled = true;
+                    setOtpUi('OTP expired. Please resend OTP.', otpRemainingSeconds);
+                    showMessage('OTP expired. Click "Resend OTP".', 'error');
+                    return;
+                }
+                setOtpUi('OTP sent. Enter it below.', otpRemainingSeconds);
+            }, 1000);
+        }
 
         // Handle registration
         document.getElementById('register-btn').addEventListener('click', async () => {
@@ -375,6 +509,7 @@
 
             // If OTP section is hidden, send OTP first
             if (otpSection.classList.contains('hidden')) {
+                isOTPVerified = false;
                 try {
                     const response = await fetch('send_otp.php', {
                         method: 'POST',
@@ -382,13 +517,19 @@
                         body: JSON.stringify({ action: 'send_otp', rollno, email })
                     });
                     
-                    const data = await response.json();
+                    const data = await safeJson(response);
                     
                     if (data.success) {
                         registrationData = { rollno, email, password };
                         otpSection.classList.remove('hidden');
                         document.getElementById('register-btn').textContent = 'Complete Registration';
+                        document.getElementById('register-btn').disabled = true;
+                        // Start 10-minute timer
+                        startOtpCountdown(10 * 60);
                         showMessage(data.message || 'OTP sent to your email', 'success');
+                        // Focus OTP input so user can type immediately
+                        const otpInput = document.getElementById('otp-code');
+                        if (otpInput) otpInput.focus();
                     } else {
                         showMessage(data.message || 'Failed to send OTP', 'error');
                     }
@@ -398,6 +539,10 @@
                 }
             } else {
                 // OTP verification already done, complete registration
+                if (!isOTPVerified) {
+                    showMessage('Please verify your email with OTP first', 'error');
+                    return;
+                }
                 try {
                     const response = await fetch('auth.php', {
                         method: 'POST',
@@ -405,7 +550,7 @@
                         body: JSON.stringify({ action: 'register', rollno: registrationData.rollno, password: registrationData.password, email: registrationData.email })
                     });
                     
-                    const data = await response.json();
+                    const data = await safeJson(response);
                     
                     if (data.success) {
                         showMessage('Registration successful! You can now login.', 'success');
@@ -415,6 +560,8 @@
                             formTitle.textContent = 'Login';
                             otpSection.classList.add('hidden');
                             document.getElementById('register-btn').textContent = 'Register';
+                            document.getElementById('register-btn').disabled = false;
+                            isOTPVerified = false;
                             // Clear form
                             document.getElementById('register-rollno').value = '';
                             document.getElementById('register-email').value = '';
@@ -453,11 +600,18 @@
                     })
                 });
                 
-                const data = await response.json();
+                const data = await safeJson(response);
                 
                 if (data.success) {
                     isOTPVerified = true;
                     document.getElementById('register-btn').disabled = false;
+                    const verifyBtn = document.getElementById('verify-otp-btn');
+                    if (verifyBtn) verifyBtn.disabled = true;
+                    if (otpTimerInterval) {
+                        clearInterval(otpTimerInterval);
+                        otpTimerInterval = null;
+                    }
+                    setOtpUi('OTP verified successfully.', otpRemainingSeconds);
                     showMessage('Email verified! Click "Complete Registration" to finish.', 'success');
                 } else {
                     showMessage(data.message || 'Invalid OTP', 'error');
@@ -483,7 +637,13 @@
                     body: JSON.stringify({ action: 'send_otp', rollno: registrationData.rollno, email: registrationData.email })
                 });
                 
-                const data = await response.json();
+                const data = await safeJson(response);
+                if (data.success) {
+                    isOTPVerified = false;
+                    startOtpCountdown(10 * 60);
+                    const otpInput = document.getElementById('otp-code');
+                    if (otpInput) otpInput.focus();
+                }
                 showMessage(data.message || 'OTP resent', data.success ? 'success' : 'error');
             } catch (error) {
                 showMessage('An error occurred. Please try again.', 'error');
@@ -507,6 +667,24 @@
                 messageDiv.className = 'message';
             }, 5000);
         }
+
+        // Topbar date/time/day (horizontal)
+        function updateDateTime() {
+            const now = new Date();
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+            const day = days[now.getDay()];
+            const date = `${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+            const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            document.getElementById('day').textContent = day;
+            document.getElementById('date').textContent = date;
+            document.getElementById('time').textContent = time;
+        }
+
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
     </script>
 </body>
 </html>

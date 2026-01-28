@@ -136,20 +136,54 @@ include 'includes/db.php';
         }
 
         .upload-form input[type="file"] {
+            display: none;
+        }
+
+        .file-picker {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px;
+            border: 1px solid #e7e9f2;
+            border-radius: 12px;
+            background: linear-gradient(180deg, #ffffff 0%, #fbfbff 100%);
             margin-bottom: 15px;
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #e0e0e0;
-            border-radius: var(--border-radius);
-            background-color: #f9f9f9;
             transition: var(--transition);
         }
 
-        .upload-form input[type="file"]:focus {
+        .file-picker:focus-within {
             border-color: var(--primary);
-            outline: none;
-            background-color: white;
             box-shadow: 0 0 0 3px var(--primary-light);
+        }
+
+        .file-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(67, 97, 238, 0.25);
+            background: rgba(67, 97, 238, 0.08);
+            color: var(--primary-dark);
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+
+        .file-btn:hover {
+            background: rgba(67, 97, 238, 0.14);
+            transform: translateY(-1px);
+        }
+
+        .file-name {
+            flex: 1;
+            color: var(--gray);
+            font-size: 14px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .upload-form button {
@@ -378,15 +412,16 @@ include 'includes/db.php';
         }
 
         .datetime-display {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
             text-align: center;
             color: var(--gray);
             font-size: 14px;
             padding: 10px 0;
             margin-bottom: 10px;
-        }
-
-        .datetime-display span {
-            margin: 0 10px;
         }
 
         footer {
@@ -462,7 +497,11 @@ include 'includes/db.php';
             <div class="card">
                 <h2>Upload New Certificate</h2>
                 <form class="upload-form" action="upload.php" method="POST" enctype="multipart/form-data">
-                    <input type="file" name="certificate" accept=".pdf,.jpg,.jpeg,.png" required>
+                    <div class="file-picker">
+                        <input id="certificateFile" type="file" name="certificate" accept=".pdf,.jpg,.jpeg,.png" required>
+                        <label class="file-btn" for="certificateFile">📎 Choose file</label>
+                        <div id="chosenFileName" class="file-name">No file selected</div>
+                    </div>
                     <button type="submit">Upload Certificate</button>
                 </form>
             </div>
@@ -665,6 +704,15 @@ include 'includes/db.php';
         // Update every second
         updateDateTime();
         setInterval(updateDateTime, 1000);
+
+        // Modern file picker label
+        const certFile = document.getElementById('certificateFile');
+        const chosenFileName = document.getElementById('chosenFileName');
+        if (certFile && chosenFileName) {
+            certFile.addEventListener('change', () => {
+                chosenFileName.textContent = certFile.files?.[0]?.name || 'No file selected';
+            });
+        }
 
         // Certificate deletion functionality
         function confirmDelete(certId) {
