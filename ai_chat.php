@@ -145,8 +145,21 @@ $request_body = [
     ]
 ];
 
+// Check if cURL is available
+if (!function_exists('curl_init')) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'cURL not available on this server. Using client-side fallback.', 'use_client_fallback' => true]);
+    exit;
+}
+
 // Use cURL to make the API request
 $ch = curl_init($api_url);
+if (!$ch) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Failed to initialize connection. Using client-side fallback.', 'use_client_fallback' => true]);
+    exit;
+}
+
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($request_body));
@@ -154,15 +167,16 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
     'Content-Type: application/json'
 ]);
 curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 
 $response = curl_exec($ch);
 $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $curl_error = curl_error($ch);
 curl_close($ch);
 
-if ($curl_error) {
+if ($curl_error || $response === false) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Failed to connect to AI service']);
+    echo json_encode(['success' => false, 'message' => 'Failed to connect to AI service. Server may block external API calls.', 'use_client_fallback' => true, 'error_detail' => $curl_error]);
     exit;
 }
 

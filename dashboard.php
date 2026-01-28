@@ -563,8 +563,123 @@ include 'includes/db.php';
     <script>
         // Store conversation history for context
         let conversationHistory = [];
+        let cachedCertificates = null;
+        let cachedApiKey = null;
+        let useClientSide = false; // Will be set to true if server-side fails
 
-        function sendMessage() {
+        // Fetch certificates and API key for client-side fallback
+        async function fetchCertificatesData() {
+            if (cachedCertificates !== null) return { certificates: cachedCertificates, api_key: cachedApiKey };
+            try {
+                const response = await fetch('get_certificates.php');
+                const data = await response.json();
+                if (data.success) {
+                    cachedCertificates = data.certificates || [];
+                    cachedApiKey = data.api_key || '';
+                    return { certificates: cachedCertificates, api_key: cachedApiKey };
+                }
+            } catch (e) {
+                console.error('Failed to fetch certificates:', e);
+            }
+            return { certificates: [], api_key: '' };
+        }
+
+        // Build certificate context for AI prompt
+        function buildCertificateContext(certificates) {
+            if (!certificates || certificates.length === 0) {
+                return "\n\n[Note: This user has not uploaded any certificates yet.]\n\n";
+            }
+            let context = "\n\n--- USER'S CURRENT CERTIFICATES ---\n";
+            certificates.forEach((cert, index) => {
+                context += `${index + 1}. ${cert.name}`;
+                if (cert.description) {
+                    context += `\n   Description: ${cert.description}`;
+                }
+                context += `\n   Uploaded: ${cert.date}\n\n`;
+            });
+            context += "--- END OF CERTIFICATES ---\n\n";
+            return context;
+        }
+
+        // Client-side API call (fallback for hosts that block server-side requests)
+        async function callGeminiClientSide(userMessage) {
+            const { certificates, api_key } = await fetchCertificatesData();
+            
+            if (!api_key) {
+                return { success: false, message: 'AI service not configured' };
+            }
+
+            const certContext = buildCertificateContext(certificates);
+            const systemPrompt = `You are an AI career assistant specialized in AI/ML certifications and career development for the "Yaswanth's AI Certificate Management Hub" platform.
+
+Your role is to:
+1. Analyze the user's current certifications and their descriptions
+2. Provide personalized career guidance based on their existing skills
+3. Recommend relevant FREE and PAID certifications they can pursue to enhance their career
+4. Suggest learning paths and roadmaps
+5. Give insights about industry trends in AI/ML
+
+When recommending certifications, always:
+- Categorize them as FREE or PAID
+- Include the provider name (Google, Microsoft, AWS, Coursera, etc.)
+- Provide estimated completion time if known
+- Explain why this certification would benefit them based on their current skills
+
+Format your responses with clear headings, bullet points, and organized sections.
+Be encouraging but realistic about career prospects.
+
+${certContext}
+
+Based on this information, help the user with their query.`;
+
+            const contents = [
+                { role: "user", parts: [{ text: systemPrompt }] },
+                { role: "model", parts: [{ text: "Hello! I'm your AI career assistant. I've reviewed your certificate portfolio and I'm ready to help you with personalized career guidance. How can I assist you today?" }] }
+            ];
+
+            // Add conversation history
+            conversationHistory.slice(-10).forEach(msg => {
+                contents.push({
+                    role: msg.role === 'user' ? 'user' : 'model',
+                    parts: [{ text: msg.text }]
+                });
+            });
+
+            // Add current message
+            contents.push({ role: "user", parts: [{ text: userMessage }] });
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${api_key}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: contents,
+                        generationConfig: {
+                            temperature: 0.7,
+                            topP: 0.95,
+                            topK: 64,
+                            maxOutputTokens: 2500
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+                    return { success: true, reply: data.candidates[0].content.parts[0].text };
+                } else if (data.error) {
+                    return { success: false, message: data.error.message || 'AI service error' };
+                }
+                return { success: false, message: 'Invalid response from AI' };
+            } catch (error) {
+                console.error('Client-side API error:', error);
+                return { success: false, message: 'Failed to connect to AI service' };
+            }
+        }
+
+        async function sendMessage() {
             const userInput = document.getElementById('userInput');
             const chatContainer = document.getElementById('chatContainer');
             
@@ -593,43 +708,56 @@ include 'includes/db.php';
             
             // Clear input immediately for better UX
             userInput.value = '';
-            
-            // Call server-side AI endpoint (keeps API key secure, includes certificate descriptions)
-            fetch('ai_chat.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    message: userMessage,
-                    history: conversationHistory.slice(-10) // Send last 10 messages for context
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                // Remove typing indicator
-                const typingElement = document.getElementById('typingIndicator');
-                if (typingElement) chatContainer.removeChild(typingElement);
-                
-                // Process and display response
-                if (data.success && data.reply) {
-                    const botResponse = data.reply;
-                    
-                    // Add to conversation history
-                    conversationHistory.push({ role: 'model', text: botResponse });
-                    
-                    // Display formatted response
-                    addMessageToChat(botResponse, 'bot');
-                } else {
-                    addMessageToChat(data.message || 'Sorry, I encountered an error. Please try again.', 'bot');
+
+            let data;
+
+            // If we already know server-side doesn't work, go straight to client-side
+            if (useClientSide) {
+                data = await callGeminiClientSide(userMessage);
+            } else {
+                // Try server-side first
+                try {
+                    const response = await fetch('ai_chat.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            message: userMessage,
+                            history: conversationHistory.slice(-10)
+                        })
+                    });
+                    data = await response.json();
+
+                    // Check if server-side failed due to external API being blocked
+                    if (!data.success && (
+                        data.use_client_fallback ||
+                        data.message?.includes('Failed to connect') ||
+                        data.message?.includes('cURL') ||
+                        data.message?.includes('connection') ||
+                        data.message?.includes('client-side')
+                    )) {
+                        console.log('Server-side API blocked, switching to client-side');
+                        useClientSide = true;
+                        data = await callGeminiClientSide(userMessage);
+                    }
+                } catch (error) {
+                    console.error('Server-side error, trying client-side:', error);
+                    useClientSide = true;
+                    data = await callGeminiClientSide(userMessage);
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                const typingElement = document.getElementById('typingIndicator');
-                if (typingElement) chatContainer.removeChild(typingElement);
-                addMessageToChat('Sorry, I encountered an error. Please try again.', 'bot');
-            });
+            }
+
+            // Remove typing indicator
+            const typingElement = document.getElementById('typingIndicator');
+            if (typingElement) chatContainer.removeChild(typingElement);
+            
+            // Process and display response
+            if (data.success && data.reply) {
+                const botResponse = data.reply;
+                conversationHistory.push({ role: 'model', text: botResponse });
+                addMessageToChat(botResponse, 'bot');
+            } else {
+                addMessageToChat(data.message || 'Sorry, I encountered an error. Please try again.', 'bot');
+            }
         }
         
         function addMessageToChat(message, sender) {
