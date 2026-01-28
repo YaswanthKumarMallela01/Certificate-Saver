@@ -132,7 +132,7 @@ $contents[] = [
 ];
 
 // Make API request to Gemini
-$api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" . $gemini_api_key;
+$api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" . $gemini_api_key;
 
 $request_body = [
     "contents" => $contents,
