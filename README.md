@@ -2,7 +2,7 @@
 
 A web-based platform to securely upload, manage, and view student certificates. This project is built using **PHP**, **HTML/CSS/JS**, and integrates basic user authentication and admin controls. The system was enhanced using **Prompt Engineering** to streamline UI/UX design and automate logic generation.
 
-🔗 **Live Demo**: [https://aifreecertisave.infy.uk](https://aifreecertisave.infy.uk)
+🔗 **Live Demo**: [https://yaswanthaicertificatemanagementhub.free.nf/](https://yaswanthaicertificatemanagementhub.free.nf/)
 
 ---
 
