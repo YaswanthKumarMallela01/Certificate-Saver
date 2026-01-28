@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Authentication</title>
+    <title>Yaswanth's AI Certificate Management Hub - Login</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -170,10 +170,59 @@
         .password-toggle:hover {
             color: var(--primary);
         }
+
+        .app-title {
+            text-align: center;
+            color: var(--primary);
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--primary-light);
+        }
+
+        .otp-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .otp-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .otp-input-group input {
+            flex: 1;
+        }
+
+        .otp-input-group button {
+            flex: 0 0 auto;
+            padding: 14px 20px;
+            margin-top: 0;
+        }
+
+        .resend-otp {
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .resend-otp a {
+            color: var(--primary);
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .resend-otp a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
     <div class="auth-container">
+        <div class="app-title">🎓 Yaswanth's AI Certificate Management Hub</div>
         <h1 id="form-title">Login</h1>
         
         <!-- Login Form -->
@@ -196,6 +245,9 @@
             <div class="form-group">
                 <input type="text" id="register-rollno" placeholder="Roll Number" required>
             </div>
+            <div class="form-group">
+                <input type="email" id="register-email" placeholder="Email Address" required>
+            </div>
             <div class="form-group password-container">
                 <input type="password" id="register-password" placeholder="Password" required>
                 <span class="password-toggle" id="register-toggle">👁️</span>
@@ -204,6 +256,23 @@
                 <input type="password" id="register-confirm-password" placeholder="Confirm Password" required>
                 <span class="password-toggle" id="confirm-toggle">👁️</span>
             </div>
+            
+            <!-- OTP Verification Section -->
+            <div id="otp-section" class="otp-section hidden">
+                <div class="form-group">
+                    <label style="font-size: 14px; color: var(--gray); margin-bottom: 8px; display: block;">
+                        Enter OTP sent to your email:
+                    </label>
+                    <div class="otp-input-group">
+                        <input type="text" id="otp-code" placeholder="Enter 6-digit OTP" maxlength="6" pattern="[0-9]{6}">
+                        <button type="button" id="verify-otp-btn">Verify</button>
+                    </div>
+                    <div class="resend-otp">
+                        <a href="#" id="resend-otp-link">Resend OTP</a>
+                    </div>
+                </div>
+            </div>
+            
             <button id="register-btn">Register</button>
             <div class="switch-text">
                 Already have an account? <span class="switch" id="show-login">Login</span>
@@ -284,13 +353,17 @@
             }
         });
 
+        let registrationData = {};
+
         // Handle registration
         document.getElementById('register-btn').addEventListener('click', async () => {
             const rollno = document.getElementById('register-rollno').value;
+            const email = document.getElementById('register-email').value;
             const password = document.getElementById('register-password').value;
             const confirmPassword = document.getElementById('register-confirm-password').value;
+            const otpSection = document.getElementById('otp-section');
             
-            if (!rollno || !password || !confirmPassword) {
+            if (!rollno || !email || !password || !confirmPassword) {
                 showMessage('Please fill in all fields', 'error');
                 return;
             }
@@ -300,27 +373,127 @@
                 return;
             }
 
+            // If OTP section is hidden, send OTP first
+            if (otpSection.classList.contains('hidden')) {
+                try {
+                    const response = await fetch('send_otp.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'send_otp', rollno, email })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        registrationData = { rollno, email, password };
+                        otpSection.classList.remove('hidden');
+                        document.getElementById('register-btn').textContent = 'Complete Registration';
+                        showMessage(data.message || 'OTP sent to your email', 'success');
+                    } else {
+                        showMessage(data.message || 'Failed to send OTP', 'error');
+                    }
+                } catch (error) {
+                    showMessage('An error occurred. Please try again.', 'error');
+                    console.error(error);
+                }
+            } else {
+                // OTP verification already done, complete registration
+                try {
+                    const response = await fetch('auth.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'register', rollno: registrationData.rollno, password: registrationData.password, email: registrationData.email })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        showMessage('Registration successful! You can now login.', 'success');
+                        setTimeout(() => {
+                            registerForm.classList.add('hidden');
+                            loginForm.classList.remove('hidden');
+                            formTitle.textContent = 'Login';
+                            otpSection.classList.add('hidden');
+                            document.getElementById('register-btn').textContent = 'Register';
+                            // Clear form
+                            document.getElementById('register-rollno').value = '';
+                            document.getElementById('register-email').value = '';
+                            document.getElementById('register-password').value = '';
+                            document.getElementById('register-confirm-password').value = '';
+                            document.getElementById('otp-code').value = '';
+                        }, 2000);
+                    } else {
+                        showMessage(data.message || 'Registration failed', 'error');
+                    }
+                } catch (error) {
+                    showMessage('An error occurred. Please try again.', 'error');
+                    console.error(error);
+                }
+            }
+        });
+
+        // Handle OTP verification
+        document.getElementById('verify-otp-btn').addEventListener('click', async () => {
+            const otp = document.getElementById('otp-code').value;
+            
+            if (!otp || otp.length !== 6) {
+                showMessage('Please enter a valid 6-digit OTP', 'error');
+                return;
+            }
+
             try {
-                const response = await fetch('auth.php', {
+                const response = await fetch('send_otp.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'register', rollno, password })
+                    body: JSON.stringify({ 
+                        action: 'verify_otp', 
+                        rollno: registrationData.rollno, 
+                        email: registrationData.email,
+                        otp: otp
+                    })
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
-                    showMessage('Registration successful! You can now login.', 'success');
-                    // Switch back to login form
-                    registerForm.classList.add('hidden');
-                    loginForm.classList.remove('hidden');
-                    formTitle.textContent = 'Login';
+                    isOTPVerified = true;
+                    document.getElementById('register-btn').disabled = false;
+                    showMessage('Email verified! Click "Complete Registration" to finish.', 'success');
                 } else {
-                    showMessage(data.message || 'Registration failed', 'error');
+                    showMessage(data.message || 'Invalid OTP', 'error');
                 }
             } catch (error) {
                 showMessage('An error occurred. Please try again.', 'error');
                 console.error(error);
+            }
+        });
+
+        // Handle resend OTP
+        document.getElementById('resend-otp-link').addEventListener('click', async (e) => {
+            e.preventDefault();
+            if (!registrationData.rollno || !registrationData.email) {
+                showMessage('Please fill in roll number and email first', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('send_otp.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'send_otp', rollno: registrationData.rollno, email: registrationData.email })
+                });
+                
+                const data = await response.json();
+                showMessage(data.message || 'OTP resent', data.success ? 'success' : 'error');
+            } catch (error) {
+                showMessage('An error occurred. Please try again.', 'error');
+            }
+        });
+
+        // Allow Enter key to verify OTP
+        document.getElementById('otp-code').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('verify-otp-btn').click();
             }
         });
 

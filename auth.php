@@ -42,6 +42,8 @@ switch ($action) {
         break;
         
     case 'register':
+        $email = $data['email'] ?? '';
+        
         // Check if user already exists
         $stmt = $conn->prepare("SELECT id FROM users WHERE rollno = ?");
         $stmt->bind_param("s", $rollno);
@@ -53,10 +55,24 @@ switch ($action) {
             exit;
         }
         
+        // Verify email is verified (check OTP table)
+        if ($email) {
+            $verify_stmt = $conn->prepare("SELECT * FROM otp_verifications WHERE rollno = ? AND email = ? AND is_used = TRUE ORDER BY created_at DESC LIMIT 1");
+            $verify_stmt->bind_param("ss", $rollno, $email);
+            $verify_stmt->execute();
+            $verify_result = $verify_stmt->get_result();
+            
+            if ($verify_result->num_rows === 0) {
+                echo json_encode(['success' => false, 'message' => 'Please verify your email first']);
+                exit;
+            }
+        }
+        
         // Insert new user (in production, hash the password!)
         $is_admin = ($rollno === 'admin') ? 1 : 0; // Auto-set admin flag if rollno is 'admin'
-        $stmt = $conn->prepare("INSERT INTO users (rollno, password, is_admin) VALUES (?, ?, ?)");
-        $stmt->bind_param("ssi", $rollno, $password, $is_admin);
+        $stmt = $conn->prepare("INSERT INTO users (rollno, email, password, is_admin, is_verified) VALUES (?, ?, ?, ?, ?)");
+        $is_verified = $email ? 1 : 0;
+        $stmt->bind_param("sssii", $rollno, $email, $password, $is_admin, $is_verified);
         
         if ($stmt->execute()) {
             echo json_encode(['success' => true, 'message' => 'Registration successful']);

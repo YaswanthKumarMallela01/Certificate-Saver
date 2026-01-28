@@ -46,7 +46,7 @@ $certCount = $countResult->fetch_assoc()['cert_count'];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin View: <?php echo htmlspecialchars($student_rollno); ?></title>
+    <title>Yaswanth's AI Certificate Management Hub - Admin View</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -308,6 +308,58 @@ $certCount = $countResult->fetch_assoc()['cert_count'];
             display: block;
         }
 
+        .app-title {
+            text-align: center;
+            color: var(--primary);
+            font-size: 24px;
+            font-weight: 600;
+            padding: 15px 0;
+            margin-bottom: 10px;
+            border-bottom: 2px solid var(--primary-light);
+        }
+
+        footer {
+            background: white;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+            padding: 20px 0;
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .social-links a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .social-links a:hover {
+            color: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .footer-text {
+            color: var(--gray);
+            font-size: 12px;
+        }
+
         @media (max-width: 768px) {
             .header-content {
                 flex-direction: column;
@@ -335,6 +387,7 @@ $certCount = $countResult->fetch_assoc()['cert_count'];
 </head>
 <body>
     <header>
+        <div class="app-title">🎓 Yaswanth's AI Certificate Management Hub</div>
         <div class="header-content">
             <div>
                 <h1 class="page-title">Admin View</h1>
@@ -435,5 +488,24 @@ $certCount = $countResult->fetch_assoc()['cert_count'];
             }
         }
     </script>
+
+    <footer>
+        <div class="footer-content">
+            <div class="social-links">
+                <a href="https://github.com/YaswanthKumarMallela01" target="_blank" rel="noopener noreferrer">
+                    <span>🔗</span> GitHub Profile
+                </a>
+                <a href="https://www.linkedin.com/in/yaswanthkumar1/" target="_blank" rel="noopener noreferrer">
+                    <span>💼</span> LinkedIn
+                </a>
+                <a href="https://github.com/YaswanthKumarMallela01/Certificate-Saver" target="_blank" rel="noopener noreferrer">
+                    <span>📦</span> Repository
+                </a>
+            </div>
+            <div class="footer-text">
+                © 2026 Yaswanth's AI Certificate Management Hub. All rights reserved.
+            </div>
+        </div>
+    </footer>
 </body>
 </html>

@@ -12,7 +12,7 @@ include 'includes/db.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Certificate Dashboard</title>
+    <title>Yaswanth's AI Certificate Management Hub - Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -366,10 +366,80 @@ include 'includes/db.php';
             0%, 60%, 100% { transform: translateY(0); }
             30% { transform: translateY(-5px); }
         }
+
+        .app-title {
+            text-align: center;
+            color: var(--primary);
+            font-size: 24px;
+            font-weight: 600;
+            padding: 15px 0;
+            margin-bottom: 10px;
+            border-bottom: 2px solid var(--primary-light);
+        }
+
+        .datetime-display {
+            text-align: center;
+            color: var(--gray);
+            font-size: 14px;
+            padding: 10px 0;
+            margin-bottom: 10px;
+        }
+
+        .datetime-display span {
+            margin: 0 10px;
+        }
+
+        footer {
+            background: white;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+            padding: 20px 0;
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .social-links a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .social-links a:hover {
+            color: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .footer-text {
+            color: var(--gray);
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
     <header>
+        <div class="app-title">🎓 Yaswanth's AI Certificate Management Hub</div>
+        <div class="datetime-display" id="datetime-display">
+            <span id="day"></span>
+            <span id="date"></span>
+            <span id="time"></span>
+        </div>
         <div class="header-content">
             <div class="welcome">
                 Welcome, <span><?php echo htmlspecialchars($_SESSION['rollno']); ?></span>
@@ -573,6 +643,29 @@ include 'includes/db.php';
             }
         });
 
+        // Update date and time display
+        function updateDateTime() {
+            const now = new Date();
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            
+            const day = days[now.getDay()];
+            const date = now.getDate();
+            const month = months[now.getMonth()];
+            const year = now.getFullYear();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            
+            document.getElementById('day').textContent = day;
+            document.getElementById('date').textContent = `${month} ${date}, ${year}`;
+            document.getElementById('time').textContent = `${hours}:${minutes}:${seconds}`;
+        }
+        
+        // Update every second
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+
         // Certificate deletion functionality
         function confirmDelete(certId) {
             if (confirm('Are you sure you want to delete this certificate? This action cannot be undone.')) {
@@ -605,5 +698,24 @@ include 'includes/db.php';
             }
         }
     </script>
+
+    <footer>
+        <div class="footer-content">
+            <div class="social-links">
+                <a href="https://github.com/YaswanthKumarMallela01" target="_blank" rel="noopener noreferrer">
+                    <span>🔗</span> GitHub Profile
+                </a>
+                <a href="https://www.linkedin.com/in/yaswanthkumar1/" target="_blank" rel="noopener noreferrer">
+                    <span>💼</span> LinkedIn
+                </a>
+                <a href="https://github.com/YaswanthKumarMallela01/Certificate-Saver" target="_blank" rel="noopener noreferrer">
+                    <span>📦</span> Repository
+                </a>
+            </div>
+            <div class="footer-text">
+                © 2026 Yaswanth's AI Certificate Management Hub. All rights reserved.
+            </div>
+        </div>
+    </footer>
 </body>
 </html>

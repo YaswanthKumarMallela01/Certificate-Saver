@@ -11,9 +11,24 @@ USE user_auth;
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     rollno VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(255),
     password VARCHAR(255) NOT NULL,
     is_admin BOOLEAN DEFAULT FALSE,
+    is_verified BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- OTP table for email verification
+CREATE TABLE IF NOT EXISTS otp_verifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    rollno VARCHAR(50) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    otp VARCHAR(6) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    is_used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_rollno_email (rollno, email),
+    INDEX idx_otp (otp)
 );
 
 -- Certificates table

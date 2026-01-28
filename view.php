@@ -38,7 +38,7 @@ $certificate = $result->fetch_assoc();
 $relative_path = $certificate['file_path'];
 $file_name = $certificate['certificate_name'];
 
-// Convert relative path to absolute path
+// Convert relative path to absolute path (handles user-specific folders)
 $file_path = __DIR__ . '/' . $relative_path;
 $file_extension = strtolower(pathinfo($relative_path, PATHINFO_EXTENSION));
 
