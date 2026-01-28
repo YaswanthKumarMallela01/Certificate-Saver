@@ -27,6 +27,10 @@ if (!file_exists($user_upload_dir)) {
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['certificate'])) {
     $original_name = basename($_FILES["certificate"]["name"]);
     $file_extension = pathinfo($original_name, PATHINFO_EXTENSION);
+    $description = trim((string)($_POST['description'] ?? ''));
+    if (strlen($description) > 2000) {
+        $description = substr($description, 0, 2000);
+    }
     
     // Generate unique filename
     $new_filename = uniqid() . '_' . $rollno . '.' . $file_extension;
@@ -51,8 +55,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['certificate'])) {
         $relative_path = 'uploads/' . $rollno . '/' . $new_filename;
         
         // Insert into database
-        $stmt = $conn->prepare("INSERT INTO certificates (rollno, certificate_name, file_path) VALUES (?, ?, ?)");
-        $stmt->bind_param("sss", $rollno, $original_name, $relative_path);
+        $stmt = $conn->prepare("INSERT INTO certificates (rollno, certificate_name, description, file_path) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("ssss", $rollno, $original_name, $description, $relative_path);
         
         if ($stmt->execute()) {
             header("Location: dashboard.php?upload_success=1");

@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS certificates (
     id INT AUTO_INCREMENT PRIMARY KEY,
     rollno VARCHAR(50) NOT NULL,
     certificate_name VARCHAR(255) NOT NULL,
+    description TEXT NULL,
     file_path VARCHAR(255) NOT NULL,
     is_deleted BOOLEAN DEFAULT FALSE,
     upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

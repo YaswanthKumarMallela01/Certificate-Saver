@@ -502,6 +502,10 @@ include 'includes/db.php';
                         <label class="file-btn" for="certificateFile">📎 Choose file</label>
                         <div id="chosenFileName" class="file-name">No file selected</div>
                     </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="certificateDesc" style="display:block; font-size:14px; color: var(--gray); margin-bottom:8px;">Certificate description (optional)</label>
+                        <textarea id="certificateDesc" name="description" rows="3" maxlength="2000" placeholder="Example: Completed Google AI Essentials (2026). Covered prompt engineering, model basics, and responsible AI." style="width:100%; padding:12px 14px; border:1px solid #e7e9f2; border-radius:12px; resize:vertical; font-family: 'Inter', sans-serif;"></textarea>
+                    </div>
                     <button type="submit">Upload Certificate</button>
                 </form>
             </div>
@@ -522,6 +526,9 @@ include 'includes/db.php';
                             echo '<li class="certificate-item">';
                             echo '<div class="certificate-info">';
                             echo '<div class="certificate-name">' . htmlspecialchars($row['certificate_name']) . '</div>';
+                            if (!empty($row['description'])) {
+                                echo '<div class="certificate-date" style="margin-top:6px;"><strong>Description:</strong> ' . htmlspecialchars($row['description']) . '</div>';
+                            }
                             echo '<div class="certificate-date">Uploaded on ' . date('M d, Y', strtotime($row['upload_date'])) . '</div>';
                             echo '</div>';
                             echo '<div class="certificate-actions">';
@@ -543,7 +550,7 @@ include 'includes/db.php';
             <h2>AI Career Assistant</h2>
             <div class="chat-container" id="chatContainer">
                 <div class="chat-message bot-message">
-                    Hello! I'm your AI career assistant focused on AI/ML certifications. I'll provide organized insights about your current certifications and suggest relevant ones to advance your career. Please tell me about the AI/ML certifications you've completed.
+                    Hello! I'm your AI career assistant. I have access to your uploaded certificates and their descriptions. I can analyze your current skills and recommend FREE and PAID certifications to enhance your career in AI/ML. Ask me anything about certifications, career paths, or skill development!
                 </div>
             </div>
             <div class="chat-input">
@@ -554,21 +561,8 @@ include 'includes/db.php';
     </div>
 
     <script>
-        // Store conversation history
-        let conversationHistory = [
-            {
-                role: "user",
-                parts: [{ 
-                    text: "You are an AI career assistant specialized in AI/ML certifications. Provide concise, organized responses with clear section headings. Format lists properly. For certification suggestions, always include official links. Keep responses professional but friendly." 
-                }]
-            },
-            {
-                role: "model",
-                parts: [{ 
-                    text: "Hello! I'm your AI career assistant focused on AI/ML certifications. I'll provide organized insights about your current certifications and suggest relevant ones to advance your career. Please tell me about the AI/ML certifications you've completed." 
-                }]
-            }
-        ];
+        // Store conversation history for context
+        let conversationHistory = [];
 
         function sendMessage() {
             const userInput = document.getElementById('userInput');
@@ -576,13 +570,12 @@ include 'includes/db.php';
             
             if (userInput.value.trim() === '') return;
             
-            // Add user message to chat and history
+            // Add user message to chat
             const userMessage = userInput.value;
             addMessageToChat(userMessage, 'user');
-            conversationHistory.push({
-                role: "user",
-                parts: [{ text: userMessage }]
-            });
+            
+            // Add to local history for context
+            conversationHistory.push({ role: 'user', text: userMessage });
             
             // Create typing indicator
             const typingIndicator = document.createElement('div');
@@ -598,24 +591,18 @@ include 'includes/db.php';
             chatContainer.appendChild(typingIndicator);
             chatContainer.scrollTop = chatContainer.scrollHeight;
             
-            // Prepare API request with full conversation history
-            const apiKey = 'AIzaSyBrrIMt4Mq3OEIP1UnWlLl0XxriWYNyLIk';
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            // Clear input immediately for better UX
+            userInput.value = '';
             
-            fetch(apiUrl, {
+            // Call server-side AI endpoint (keeps API key secure, includes certificate descriptions)
+            fetch('ai_chat.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    contents: conversationHistory,
-                    generationConfig: {
-                        temperature: 0.5,
-                        topP: 0.95,
-                        topK: 64,
-                        maxOutputTokens: 2000,
-                        responseMimeType: "text/plain"
-                    }
+                    message: userMessage,
+                    history: conversationHistory.slice(-10) // Send last 10 messages for context
                 })
             })
             .then(response => response.json())
@@ -624,23 +611,18 @@ include 'includes/db.php';
                 const typingElement = document.getElementById('typingIndicator');
                 if (typingElement) chatContainer.removeChild(typingElement);
                 
-                // Process and display API response
-                if (data.candidates && data.candidates[0].content.parts[0].text) {
-                    const botResponse = data.candidates[0].content.parts[0].text;
+                // Process and display response
+                if (data.success && data.reply) {
+                    const botResponse = data.reply;
                     
                     // Add to conversation history
-                    conversationHistory.push({
-                        role: "model",
-                        parts: [{ text: botResponse }]
-                    });
+                    conversationHistory.push({ role: 'model', text: botResponse });
                     
                     // Display formatted response
                     addMessageToChat(botResponse, 'bot');
                 } else {
-                    addMessageToChat('Sorry, I encountered an error. Please try again.', 'bot');
+                    addMessageToChat(data.message || 'Sorry, I encountered an error. Please try again.', 'bot');
                 }
-                
-                userInput.value = '';
             })
             .catch(error => {
                 console.error('Error:', error);

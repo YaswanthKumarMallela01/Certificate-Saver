@@ -424,7 +424,7 @@ $certCount = $countResult->fetch_assoc()['cert_count'];
             <h2 class="card-title">Certificates</h2>
             <ul class="certificate-list">
                 <?php
-                $sql = "SELECT id, certificate_name, file_path, upload_date FROM certificates WHERE rollno = ? AND is_deleted = FALSE ORDER BY upload_date DESC";
+                $sql = "SELECT id, certificate_name, description, file_path, upload_date FROM certificates WHERE rollno = ? AND is_deleted = FALSE ORDER BY upload_date DESC";
                 $stmt = $conn->prepare($sql);
                 $stmt->bind_param("s", $student_rollno);
                 
@@ -439,6 +439,9 @@ $certCount = $countResult->fetch_assoc()['cert_count'];
                             echo '<li class="certificate-item">';
                             echo '<div class="certificate-info">';
                             echo '<div class="certificate-name">' . htmlspecialchars($row['certificate_name']) . '</div>';
+                            if (!empty($row['description'])) {
+                                echo '<div class="certificate-date" style="margin-top:6px;"><strong>Description:</strong> ' . htmlspecialchars($row['description']) . '</div>';
+                            }
                             echo '<div class="certificate-date">Uploaded on ' . date('M d, Y', strtotime($row['upload_date'])) . '</div>';
                             echo '</div>';
                             echo '<div class="certificate-actions">';
