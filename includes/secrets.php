@@ -14,4 +14,4 @@ $SMTP_PASS = 'veyz vjld inqp dwvt';
 $SMTP_FROM_NAME = "Yaswanth's AI Certificate Management Hub";
 
 // Gemini API Key
-$GEMINI_API_KEY = 'AIzaSyBrrIMt4Mq3OEIP1UnWlLl0XxriWYNyLIk';
+$GEMINI_API_KEY = 'AIzaSyBuZRMq20YTxYL7xQaZosnVX8AO_67lkt8';
