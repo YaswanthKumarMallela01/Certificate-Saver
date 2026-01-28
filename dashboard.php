@@ -599,7 +599,7 @@ include 'includes/db.php';
             chatContainer.scrollTop = chatContainer.scrollHeight;
             
             // Prepare API request with full conversation history
-            const apiKey = 'Your-Gemini-API-Key';
+            const apiKey = 'AIzaSyBrrIMt4Mq3OEIP1UnWlLl0XxriWYNyLIk';
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
             
             fetch(apiUrl, {

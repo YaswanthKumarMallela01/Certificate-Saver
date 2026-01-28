@@ -7,7 +7,7 @@ include 'includes/db.php';
 // Get POST data
 $data = json_decode(file_get_contents('php://input'), true);
 $action = $data['action'] ?? '';
-$rollno = $data['rollno'] ?? '';
+$rollno = trim((string)($data['rollno'] ?? ''));
 $password = $data['password'] ?? '';
 
 // Process actions
@@ -42,7 +42,7 @@ switch ($action) {
         break;
         
     case 'register':
-        $email = $data['email'] ?? '';
+        $email = strtolower(trim((string)($data['email'] ?? '')));
         
         // Check if user already exists
         $stmt = $conn->prepare("SELECT id FROM users WHERE rollno = ?");
