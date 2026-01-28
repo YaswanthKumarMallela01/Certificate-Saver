@@ -14,10 +14,18 @@ if (!isset($_GET['id'])) {
 
 $certificate_id = $_GET['id'];
 $rollno = $_SESSION['rollno'];
+$is_admin = isset($_SESSION['is_admin']) && $_SESSION['is_admin'];
 
-// Verify the certificate belongs to the logged-in user
-$stmt = $conn->prepare("SELECT file_path, certificate_name FROM certificates WHERE id = ? AND rollno = ?");
-$stmt->bind_param("is", $certificate_id, $rollno);
+// Verify the certificate belongs to the logged-in user (or user is admin)
+if ($is_admin) {
+    // Admin can view any certificate
+    $stmt = $conn->prepare("SELECT file_path, certificate_name FROM certificates WHERE id = ?");
+    $stmt->bind_param("i", $certificate_id);
+} else {
+    // Regular user can only view their own certificates
+    $stmt = $conn->prepare("SELECT file_path, certificate_name FROM certificates WHERE id = ? AND rollno = ?");
+    $stmt->bind_param("is", $certificate_id, $rollno);
+}
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -27,9 +35,12 @@ if ($result->num_rows === 0) {
 }
 
 $certificate = $result->fetch_assoc();
-$file_path = $certificate['file_path'];
+$relative_path = $certificate['file_path'];
 $file_name = $certificate['certificate_name'];
-$file_extension = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
+
+// Convert relative path to absolute path
+$file_path = __DIR__ . '/' . $relative_path;
+$file_extension = strtolower(pathinfo($relative_path, PATHINFO_EXTENSION));
 
 // Check if file exists
 if (!file_exists($file_path)) {

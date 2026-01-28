@@ -11,18 +11,17 @@ $rollno = $_SESSION['rollno'];
 
 // Create uploads directory if it doesn't exist
 if (!file_exists($upload_dir)) {
-    mkdir($upload_dir, 0755, true);  // Safer permissions
-    chmod($upload_dir, 0755);        // Explicitly set permissions
+    mkdir($upload_dir, 0755, true);
+    chmod($upload_dir, 0755);
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['certificate'])) {
-    $target_dir = __DIR__ . "/uploads/";  // This is crucial for InfinityFree
     $original_name = basename($_FILES["certificate"]["name"]);
     $file_extension = pathinfo($original_name, PATHINFO_EXTENSION);
     
     // Generate unique filename
     $new_filename = uniqid() . '_' . $rollno . '.' . $file_extension;
-    $target_file = $target_dir . $new_filename;
+    $target_file = $upload_dir . $new_filename;
     
     // Check file size (max 5MB)
     if ($_FILES["certificate"]["size"] > 5000000) {
@@ -39,9 +38,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['certificate'])) {
     
     // Try to upload file
     if (move_uploaded_file($_FILES["certificate"]["tmp_name"], $target_file)) {
+        // Store relative path in database for portability
+        $relative_path = 'uploads/' . $new_filename;
+        
         // Insert into database
         $stmt = $conn->prepare("INSERT INTO certificates (rollno, certificate_name, file_path) VALUES (?, ?, ?)");
-        $stmt->bind_param("sss", $rollno, $original_name, $target_file);
+        $stmt->bind_param("sss", $rollno, $original_name, $relative_path);
         
         if ($stmt->execute()) {
             header("Location: dashboard.php?upload_success=1");

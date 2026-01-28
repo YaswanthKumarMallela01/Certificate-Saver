@@ -42,9 +42,10 @@ $stmt = $conn->prepare("UPDATE certificates SET is_deleted = TRUE WHERE id = ?")
 $stmt->bind_param("i", $certId);
 
 if ($stmt->execute()) {
-    // Optionally: Actually delete the file
-    // if (file_exists($cert['file_path'])) {
-    //     unlink($cert['file_path']);
+    // Optionally: Actually delete the file (uncomment if you want to delete files)
+    // $file_path = __DIR__ . '/' . $cert['file_path'];
+    // if (file_exists($file_path)) {
+    //     unlink($file_path);
     // }
     echo json_encode(['success' => true]);
 } else {

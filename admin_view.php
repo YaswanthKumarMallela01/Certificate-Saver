@@ -339,9 +339,6 @@ $certCount = $countResult->fetch_assoc()['cert_count'];
             <div>
                 <h1 class="page-title">Admin View</h1>
                 <div class="student-id"><?php echo htmlspecialchars($student_rollno); ?></div>
-                <?php if ($student && isset($student['name'])): ?>
-                    <div class="student-name"><?php echo htmlspecialchars($student['name']); ?></div>
-                <?php endif; ?>
             </div>
             <div class="action-buttons">
                 <a href="admin.php" class="btn btn-secondary">Back to Admin</a>
@@ -365,12 +362,6 @@ $certCount = $countResult->fetch_assoc()['cert_count'];
                     <div class="info-label">Roll Number</div>
                     <div class="info-value"><?php echo htmlspecialchars($student_rollno); ?></div>
                 </div>
-                <?php if ($student && isset($student['name'])): ?>
-                <div class="info-item">
-                    <div class="info-label">Student Name</div>
-                    <div class="info-value"><?php echo htmlspecialchars($student['name']); ?></div>
-                </div>
-                <?php endif; ?>
                 <div class="info-item">
                     <div class="info-label">Total Certificates</div>
                     <div class="info-value"><?php echo $certCount; ?></div>
@@ -391,14 +382,14 @@ $certCount = $countResult->fetch_assoc()['cert_count'];
 
                     if ($result->num_rows > 0) {
                         while ($row = $result->fetch_assoc()) {
-                            $file_path = 'uploads/' . basename($row['file_path']); // Ensure correct path
+                            $file_path = $row['file_path']; // Already stored as relative path
                             echo '<li class="certificate-item">';
                             echo '<div class="certificate-info">';
                             echo '<div class="certificate-name">' . htmlspecialchars($row['certificate_name']) . '</div>';
                             echo '<div class="certificate-date">Uploaded on ' . date('M d, Y', strtotime($row['upload_date'])) . '</div>';
                             echo '</div>';
                             echo '<div class="certificate-actions">';
-                            echo '<a href="' . htmlspecialchars($file_path) . '" target="_blank" class="action-btn view-btn">View</a>';
+                            echo '<a href="view.php?id=' . $row['id'] . '" target="_blank" class="action-btn view-btn">View</a>';
                             echo '<a href="' . htmlspecialchars($file_path) . '" download class="action-btn download-btn">Download</a>';
                             echo '<button class="action-btn delete-btn" onclick="confirmDelete(' . $row['id'] . ', true)">Delete</button>';
                             echo '</div>';

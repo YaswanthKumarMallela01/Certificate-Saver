@@ -16,17 +16,6 @@ $sql = "SELECT u.rollno, COUNT(c.id) as cert_count
         ORDER BY u.rollno";
 $result = $conn->query($sql);
 
-// Get total certificate count for stats (only non-deleted certificates)
-// Get total certificate count by summing up individual student counts
-// This ensures consistency with what's shown in the student list
-$sql = "SELECT u.rollno, COUNT(c.id) as cert_count 
-        FROM users u 
-        LEFT JOIN certificates c ON u.rollno = c.rollno AND c.is_deleted = FALSE
-        WHERE u.is_admin = FALSE 
-        GROUP BY u.rollno
-        ORDER BY u.rollno";
-$result = $conn->query($sql);
-
 // Calculate total certificates by summing up all individual counts
 $totalCerts = 0;
 if ($result->num_rows > 0) {
@@ -36,14 +25,6 @@ if ($result->num_rows > 0) {
     // Reset result pointer to use the same result set for the table display
     $result->data_seek(0);
 }
-
-// Get total student count
-$totalStudentSql = "SELECT COUNT(rollno) as total FROM users WHERE is_admin = FALSE";
-$totalStudentResult = $conn->query($totalStudentSql);
-$totalStudents = $totalStudentResult->fetch_assoc()['total'];
-
-// Calculate average certificates per student
-$avgCerts = $totalStudents > 0 ? round($totalCerts / $totalStudents, 1) : 0;
 
 // Get total student count
 $totalStudentSql = "SELECT COUNT(rollno) as total FROM users WHERE is_admin = FALSE";
@@ -328,7 +309,6 @@ $avgCerts = $totalStudents > 0 ? round($totalCerts / $totalStudents, 1) : 0;
                 <thead>
                     <tr>
                         <th>Roll Number</th>
-                        <th>User Identifier</th>
                         <th>Certificate Count</th>
                         <th>Actions</th>
                     </tr>
@@ -338,7 +318,6 @@ $avgCerts = $totalStudents > 0 ? round($totalCerts / $totalStudents, 1) : 0;
                         <?php while($row = $result->fetch_assoc()): ?>
                         <tr>
                             <td><?php echo htmlspecialchars($row['rollno']); ?></td>
-                            <td><?php echo htmlspecialchars($row['rollno']); ?></td>
                             <td><span class="cert-count"><?php echo $row['cert_count']; ?></span></td>
                             <td class="action-buttons">
                                 <a href="admin_view.php?rollno=<?php echo urlencode($row['rollno']); ?>" class="view-btn">View Certificates</a>
@@ -347,7 +326,7 @@ $avgCerts = $totalStudents > 0 ? round($totalCerts / $totalStudents, 1) : 0;
                         <?php endwhile; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="4" class="no-data">No student records found</td>
+                            <td colspan="3" class="no-data">No student records found</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>

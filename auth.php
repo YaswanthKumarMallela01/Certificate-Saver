@@ -1,19 +1,8 @@
 <?php
 header('Content-Type: application/json');
 
-// Database configuration
-$db_host = 'localhost';
-$db_user = 'yaswanth';
-$db_pass = '@Mallela15960';
-$db_name = 'user_auth';
-
-// Connect to MySQL
-$conn = new mysqli($db_host, $db_user, $db_pass, $db_name);
-
-// Check connection
-if ($conn->connect_error) {
-    die(json_encode(['success' => false, 'message' => 'Database connection failed']));
-}
+// Use centralized database connection
+include 'includes/db.php';
 
 // Get POST data
 $data = json_decode(file_get_contents('php://input'), true);
